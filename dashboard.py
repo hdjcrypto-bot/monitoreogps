@@ -1,4 +1,4 @@
-# --- IMPORTACIONES ---
+  # --- IMPORTACIONES ---
 import streamlit as st
 import requests
 import json
@@ -17,6 +17,7 @@ hide_st_page_style = """
 div[data-testid="stSidebarNav"] {
     display: none;
 }
+
 </style>
 """
 
@@ -51,7 +52,42 @@ LIGHT_SIZE_PX = "15px"
 def obtener_hora_venezuela() -> datetime:
     """Retorna el objeto datetime con la hora actual en la Zona Horaria de Venezuela (VET)."""
     return datetime.now(VENEZUELA_TZ)
-
+def scroll_to_top_callback():
+    """
+    Fuerza el scroll de la ventana al inicio (0, 0)
+    y limpia el estado de la unidad seleccionada.
+    """
+    # 1. Fuerza el scroll al inicio (0, 0) usando JavaScript
+    st.markdown(
+        """
+        <script>
+            window.scrollTo(0, 0);
+        </script>
+        """,
+        unsafe_allow_html=True,
+    )
+    # 2. Resetea el estado de la unidad seleccionada para mostrar la lista completa
+    if 'selected_unit_id' in st.session_state:
+        st.session_state.selected_unit_id = None
+# Conversion de grados a Sentido Cardinal        
+def grados_a_direccion(grados):
+    # Asegura que el valor esté entre 0 y 360 grados
+    grados = grados % 360
+    
+    # Lista de direcciones cardinales (16 puntos)
+    direcciones = [
+        "Norte", "Nor-Noreste", "Noreste", "Este-Noreste", 
+        "Este", "Este-Sureste", "Sureste", "Sur-Sureste", 
+        "Sur", "Sur-Suroeste", "Suroeste", "Oeste-Suroeste", 
+        "Oeste", "Oeste-Noroeste", "Noroeste", "Nor-Noroeste"
+    ]
+    
+    # Desplazamiento inicial de la primera dirección a 11.25 grados
+    # para centrar las direcciones cardinales en sus rangos.
+    # Cada sector es de 22.5 grados, 11.25 es la mitad.
+    indice = round(grados / 22.5) % 16
+    
+    return direcciones[indice]        
 # 🚨 FUNCIÓN OPTIMIZADA 🚨
 def verificar_falla_gps(unidad_data: Dict[str, Any], hora_venezuela: datetime,
                         minutos_encendida: int, minutos_apagada: int) -> Dict[str, Any]:
@@ -103,7 +139,7 @@ def verificar_falla_gps(unidad_data: Dict[str, Any], hora_venezuela: datetime,
         unidad_data['Estado_Falla_GPS'] = True
         unidad_data['FALLA_GPS_MOTIVO'] = motivo_falla
         unidad_data['LAST_REPORT_TIME_FOR_DETAIL'] = last_report_str
-        unidad_data['IGNICION_OVERRIDE'] = "Falla GPS 🚫"
+        unidad_data['IGNICION_OVERRIDE'] = "Falla GPS 🛠"
         # Usamos el f-string para el estilo
         unidad_data['CARD_STYLE_OVERRIDE'] = f"background-color: {COLOR_FALLA_GPS}; padding: 15px; border-radius: 5px; color: black; margin-bottom: 0px;"
 
@@ -424,6 +460,7 @@ def obtener_datos_unidades(nombre_flota: str, config: Dict[str, Any], gps_min_en
             velocidad = float(unidad_con_falla_check.get("speed_dunit", 0.0))
             lat = float(unidad_con_falla_check.get("ylat", 0.0))
             lon = float(unidad_con_falla_check.get("xlong", 0.0))
+            sentido = float(unidad_con_falla_check.get("heading", 0.0))
             # unit_id debe ser único, usamos unitid o name como fallback
             unit_id = unidad_con_falla_check.get("unitid", unidad_con_falla_check.get("name", "N/A_ID_FALLBACK"))
 
@@ -508,6 +545,7 @@ def obtener_datos_unidades(nombre_flota: str, config: Dict[str, Any], gps_min_en
                 "VELOCIDAD": velocidad,
                 "LATITUD": lat,
                 "LONGITUD": lon,
+                "SENTIDO": sentido,
                 "UBICACION_TEXTO": unidad_con_falla_check.get("location", "Dirección no disponible"),
                 "CARD_STYLE": card_style,
                 "FALLA_GPS_MOTIVO": falla_gps_motivo,
@@ -603,9 +641,17 @@ def set_unit_to_locate(unit_id):
 
 # --- CALLBACK PARA DESELECCIONAR LA UNIDAD A UBICAR (NUEVO) ---
 def clear_unit_to_locate():
-    """Callback para deseleccionar la unidad de la vista de mapa principal."""
+    """
+    Callback para deseleccionar la unidad, limpiar el caché 
+    y establecer un indicador para forzar el scroll al inicio.
+    """
+    # 1. Lógica de limpieza de estado y caché
     st.session_state['unit_to_locate_id'] = None
     st.cache_data.clear()
+        
+    # 2. ✅ NUEVA ACCIÓN: Establecer el indicador de scroll
+    st.session_state['scroll_to_top_flag'] = True 
+    
 
 
 # --- INICIALIZACIÓN DEL ESTADO DE SESIÓN ---
@@ -787,7 +833,7 @@ with st.sidebar:
             st.caption("Contraseña de acceso: `admin`")
 
     # 3. LEYENDA DE COLORES
-     with st.expander("##### Leyenda de Estados 🎨", expanded=False):
+     with st.expander("🎨 Leyenda de Estados ", expanded=False):
         display_color_legend()
 
     # --- INICIO DEL EXPANDER DE FILTROS ---
@@ -805,7 +851,7 @@ with st.sidebar:
             filtro_estado_options = [
                 "Mostrar Todos",
                 "Vertedero 🚛", # ¡NUEVO FILTRO!
-                "Falla GPS 🚫",
+                "Falla GPS 🛠",
                 "Apagadas ❄️",
                 "Paradas Largas 🛑",
                 "Resguardo (Sede) 🛡️",
@@ -1348,25 +1394,27 @@ while True:
                 lat = selected_row['LATITUD']
                 lon = selected_row['LONGITUD']
                 nombre_unidad = selected_row['UNIDAD'].split('-')[0]
+                
+                # >>> INICIO DE MODIFICACIÓN SOLICITADA: CÁLCULO DEL PULSO <<<
+                PULSE_FREQUENCY = 5 
+                pulsing_factor = (np.sin(time.time() * PULSE_FREQUENCY) + 1) / 10.0 
 
-                st.subheader(f"🌐 Ubicación de **{nombre_unidad}**")
+                BASE_RADIUS_M = 2        
+                PULSE_AMPLITUDE_M = 15
+                current_radius = BASE_RADIUS_M + (pulsing_factor * PULSE_AMPLITUDE_M)
+                # Opacidad varía de 0.5 (127) a 1.0 (255)
+                current_opacity_int = int((0.5 + (pulsing_factor * 0.5)) * 255) 
+                # >>> FIN DE MODIFICACIÓN SOLICITADA: CÁLCULO DEL PULSO <<<
 
-                # Botón de Deselección
-                st.button(
-                    "❌ Deseleccionar Unidad y Volver a Lista Completa",
-                    on_click=clear_unit_to_locate,
-                    type="primary",
-                    key=f"btn_clear_unit_{unique_time_id}", # Clave única
-                    help="Vuelve a la vista de todas las tarjetas."
-                )
-                st.markdown("---")
+                st.subheader(f"🌐 Ubicación en Mapa de la Unidad **{nombre_unidad}**")
+
 
                 # Estructura de dos columnas: Mapa (izq) y Tarjeta (der)
                 map_col, card_col = st.columns([3, 1])
 
               
                 with map_col:
-                # ... definición de map_data y view_state (¡Asegúrate que existen!) ...
+                # ... definition of map_data and view_state ...
                     map_data = pd.DataFrame({
                         'lat': [lat],
                         'lon': [lon],
@@ -1375,19 +1423,37 @@ while True:
                     view_state = pdk.ViewState(
                         latitude=lat, 
                         longitude=lon,
-                        zoom=16,
+                        zoom=18,
                         pitch=0,
                     )
     
-                    layer = pdk.Layer(
-                        'ScatterplotLayer',
-                        data=map_data,
-                        get_position='[lon, lat]',
-                    # 🟢 Color del círculo: Rojo sólido [R, G, B, Opacidad]
-                        get_color='[255, 0, 0, 200]', 
-                    # 📏 Tamaño del círculo: 15 metros de radio (puedes ajustar este valor)
-                        get_radius=5, 
-                        pickable=True
+                    # >>> INICIO DE MODIFICACIÓN SOLICITADA: CAPAS DEL PULSO <<<
+                    # La capa estática original es reemplazada por dos capas dinámicas.
+                    
+                    # 1. Capa de Fondo Fijo (Base)
+                    layer_unidad_fija = pdk.Layer(
+                        "ScatterplotLayer",
+                        data=map_data, 
+                        get_position=["lon", "lat"], 
+                        get_color="[255, 0, 0, 255]",      # Rojo Sólido (255 de opacidad)
+                        get_radius=BASE_RADIUS_M,          # Radio fijo (100m)
+                        radius_min_pixels=3,
+                        pickable=True,
+                        auto_highlight=True,
+                        id="unidad_base_pulso",
+                    )
+
+                    # 2. Capa de Pulso (Superposición Dinámica)
+                    layer_unidad_pulso = pdk.Layer(
+                        "ScatterplotLayer",
+                        data=map_data, 
+                        get_position=["lon", "lat"],
+                        # Color rojo con la opacidad dinámica calculada:
+                        get_color=f"[255, 0, 0, {current_opacity_int}]", 
+                        get_radius=current_radius, # <--- ¡Radio dinámico!
+                        radius_min_pixels=3,
+                        pickable=False, 
+                        id="unidad_pulso_dinamico",
                     )
 
 
@@ -1395,8 +1461,9 @@ while True:
                     st.pydeck_chart(pdk.Deck(
                         map_style='light',
                         initial_view_state=view_state,
-                        layers=[layer]
+                        layers=[layer_unidad_fija, layer_unidad_pulso] # Usamos las capas pulsantes
                     ), use_container_width=True)
+                    # >>> FIN DE MODIFICACIÓN SOLICITADA: CAPAS DEL PULSO <<<
 
                 with card_col:
                     # 🖼️ RENDERIZAR TARJETA DE LA UNIDAD SELECCIONADA (usamos la lógica de tarjeta del loop de abajo)
@@ -1455,6 +1522,12 @@ while True:
                     st.caption(f"Dirección: **{selected_row['UBICACION_TEXTO']}**")
                     st.caption(f"Último Reporte: **{selected_row['LAST_REPORT_TIME_DISPLAY']}**")
                     st.caption(f"Coordenadas: ({selected_row['LONGITUD']:.4f}, {selected_row['LATITUD']:.4f})\r\n")
+                    # Detalle de Sentido en el que se Encuentra la Unidad.    
+                    grados = selected_row['SENTIDO']
+                    direccion_cardinal = grados_a_direccion(grados)
+                    st.caption(f"Sentido: {direccion_cardinal} ({grados}°)")
+
+                    
 
                     # Botón de Deselección (opcional en la tarjeta)
                     st.button(
@@ -1557,7 +1630,7 @@ while True:
                             f'</p>',
                             unsafe_allow_html=True
                         )
-                        # El texto de la velocidad debe ser negro si el fondo es claro (Vertedero o Falla GPS)
+                        
                         final_text_color = "black" if COLOR_VERTEDERO == "#FCC6BB" and row['EN_VERTEDERO_FLAG'] else color_velocidad
                         if row['ES_FALLA_GPS_FLAG']:
                             final_text_color = "black"
@@ -1570,15 +1643,12 @@ while True:
                         )
                         st.markdown(f'<p style="font-size: 1.0em; margin-top: 0px; opacity: 1.1; text-align: center; margin-bottom: 0px;">{estado_display}</p>', unsafe_allow_html=True)
                         st.markdown('</div>', unsafe_allow_html=True)
-                         # Botón de Ubicación
-                        # =================================================================
-                        # === INICIO DE LA SECCIÓN CORREGIDA PARA EL BOTÓN DE MAPA ===
-                        # =================================================================
 
-
+                        # Botón de Mapa
+   
                         st.button(
                                 "🗺️ Ir al Mapa",
-                                # 🚨 CORRECCIÓN CLAVE: SE AÑADE unique_time_id PARA EVITAR DUPLICIDAD
+                                # SE AÑADE unique_time_id PARA EVITAR DUPLICIDAD
                                 key=f"map_btn_{unit_id_current}_{row_index}_{col_index}_{unique_time_id}",
                                 on_click=set_unit_to_locate,
                                 args=(unit_id_current,), # Pasa el UNIT_ID al callback
@@ -1597,29 +1667,38 @@ while True:
 
                             if falla_motivo:
                                 st.error(
-                                    f"🚫 **Motivo Falla GPS:** {falla_motivo}\n\n"
+                                    f"🛠 **Motivo Falla GPS:** {falla_motivo}\n\n"
                                     f"🕒 **Último Reporte:** {last_report_display}"
                                 )
 
                             st.caption(f"Estado GPS: **{estado_ignicion}**")
                             st.caption(f"Dirección: **{row['UBICACION_TEXTO']}**")
-
+                            st.caption(f"Sentido: **{row['SENTIDO']:.0f}°** (Grados)")
                             if not falla_motivo:
                                 st.caption(f"Último Reporte: **{last_report_display}**")
 
                             st.caption(f"Coordenadas: ({row['LONGITUD']:.4f}, {row['LATITUD']:.4f})\r\n")
-
-                            # --- 🗺️ LÓGICA: BOTÓN IR AL MAPA (Streamlit Button) 🗺️ ---
-                            
-                            # --- ----------------------------------- ---
-                        # =================================================================
-                        # === FIN DE LA SECCIÓN CORREGIDA ===
-                        # =================================================================
-
+                    
                 st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
     st.markdown("---")
 
-    # USO DEL PARÁMETRO DINÁMICO DE PAUSA
-    # El testigo permanece VERDE durante el time.sleep
+    # PARÁMETRO DINÁMICO DE PAUSA
+    # testigo permanece VERDE durante el time.sleep
     time.sleep(TIME_SLEEP)
+
+    # script al final de cada renderización para forzar el inicio de la página.
+    if st.session_state.get('scroll_to_top_flag', False):
+        
+    # borra el flag si ya se usó, para que no se ejecute continuamente
+        del st.session_state['scroll_to_top_flag']
+
+    # script para desplazar la página.
+        st.markdown(
+            """
+            <script>
+                window.scrollTo(0, 0);
+            </script>
+            """,
+        unsafe_allow_html=True,
+    )
