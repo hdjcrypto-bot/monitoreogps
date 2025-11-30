@@ -6,5 +6,7 @@
     "resguardo_secundario_coords": [
         [10.234530,-67.969920] 
     ],
-    "vertedero_coords": []
+    "vertedero_coords": [],
+    "ids_exep": []
 }
+
