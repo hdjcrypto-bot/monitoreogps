@@ -2956,7 +2956,7 @@ elif st.session_state.current_logistica_view == 'asignacion_crud':
     st.stop()
 else:
     
-    st.title(f"Dashboard Principal (Flota: {flota_a_mostrar})")
+    st.title(f"Dashboard (Flota: {flota_a_mostrar})")
    
     # ...
 
