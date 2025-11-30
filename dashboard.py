@@ -2954,11 +2954,7 @@ elif st.session_state.current_logistica_view == 'asignacion_crud':
     st.cache_data.clear()
     display_asignacion_crud()
     st.stop()
-else:
-    
-    st.title(f"Dashboard (Flota: {flota_a_mostrar})")
-   
-    # ...
+
 
 # 🚨 PLACEHOLDER PARA EL TESTIGO DE ESTADO (Fuera del Sidebar) 🚨
 placeholder_status_light = st.empty()
