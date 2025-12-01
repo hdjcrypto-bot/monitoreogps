@@ -3086,7 +3086,7 @@ with st.sidebar:
             )
 
             st.button(
-                "Ingreso de unidades",
+                "Ingreso de unidad",
                 use_container_width=True, 
                 on_click=set_logistica_view,
                 disabled=(st.session_state.current_logistica_view != 'menu'),
