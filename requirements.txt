@@ -4,3 +4,5 @@ pandas
 pydeck
 numpy
 shapely
+pytz
+plotly
