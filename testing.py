@@ -4471,21 +4471,12 @@ while True:
                                 color_velocidad = "#D32F2F" # ROJO (Crítico)
                                 estado_display = "EXCESO 🚨"
 
-                                enviar_alerta_n8n(
-                                    row['UNIDAD'], 
-                                    row['VELOCIDAD'], 
-                                    80, 
-                                    row['LATITUD'], 
-                                    row['LONGITUD']
-                           
-                                )
-
                                 
                             elif velocidad_float >= SPEED_THRESHOLD_KPH:
                                 color_velocidad = "#FF9800" # NARANJA (Alerta)
                                 estado_display = "Alerta ⚠️"
 
-                            elif velocidad_float >= 71:
+                            elif velocidad_float >= 75:
                                 unidad_id = row['UNIDAD']
                                 v_actual = int(velocidad_float)
                                 velocidad_anterior = st.session_state.ultima_velocidad_unidades.get(unidad_id)
