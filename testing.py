@@ -21,8 +21,8 @@ if 'ultima_velocidad_unidades' not in st.session_state:
 
 def enviar_alerta_n8n(unidad, velocidad, limite, latitud, longitud):
     # PEGA AQUÍ LA URL QUE COPIASTE EN EL PASO ANTERIOR
-    WEBHOOK_URL = "http://147.93.2.250:5678/webhook/a28852ed-3635-4fa1-8f12-01109ac76eb1"
-    
+    WEBHOOK_URL = "http://147.93.2.250:5678/webhook/b9dc3f57-d722-492d-b384-b5aebccac8c8"
+       
     payload = {
         
         "evento": "Exceso de Velocidad",
