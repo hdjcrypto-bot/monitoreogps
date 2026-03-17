@@ -4476,7 +4476,7 @@ while True:
                                 color_velocidad = "#FF9800" # NARANJA (Alerta)
                                 estado_display = "Alerta ⚠️"
 
-                            elif velocidad_float >= 71:
+                            elif velocidad_float >= 75:
                                 unidad_id = row['UNIDAD']
                                 v_actual = int(velocidad_float)
                                 velocidad_anterior = st.session_state.ultima_velocidad_unidades.get(unidad_id)
