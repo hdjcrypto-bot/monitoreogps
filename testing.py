@@ -4468,7 +4468,7 @@ while True:
 
                             # Resaltado visual para Exceso de Velocidad
 
-                            elif velocidad_float >= 20:
+                            elif velocidad_float >= 50:
                                 color_velocidad = "#D32F2F" # ROJO (Crítico)
                                 estado_display = "EXCESO 🚨"
                                 unidad_id = row['UNIDAD']
