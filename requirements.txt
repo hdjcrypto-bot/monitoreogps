@@ -6,3 +6,4 @@ numpy
 shapely
 pytz
 plotly
+matplotlib
