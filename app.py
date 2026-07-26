@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
-DB_FILE = "fospuca_operativo.db"
+DB_FILE = "fospuca_operativo1.db"
 
 
 def init_db():
