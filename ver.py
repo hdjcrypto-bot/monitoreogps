@@ -937,7 +937,7 @@ elif menu == "📊 Dashboard en Vivo":
           <body>
               <div class="header-container">
                   <h1>REPORTE OPERATIVO MONITOREO Y GPS</h1>
-                  <div class="meta-info">Semana: {selected_week} &nbsp;&nbsp;|&nbsp;&nbsp; Turno: {selected_turno_live} &nbsp;&nbsp;|&nbsp;&nbsp; Fecha: {today} &nbsp;&nbsp;|&nbsp;&nbsp; Hora: {current_time_str}</div>
+                  <div class="meta-info">Semana: {selected_week} &nbsp;&nbsp;|&nbsp;&nbsp;|&nbsp;&nbsp; Fecha: {today} &nbsp;&nbsp;|&nbsp;&nbsp</div>
               </div>
               
               <h3>Indicadores Generales de Flota</h3>
