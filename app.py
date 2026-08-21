@@ -1,4 +1,4 @@
-import base64
+iimport base64
 import datetime
 import io
 import sqlite3
@@ -114,6 +114,7 @@ LISTA_ANALISTAS = [
 "OSCAR RODOLFO IBARRA",
 "PETER MOUSOLINE BARRIOS PADILLA",
 "RICARDO MANUEL MORAO",
+"JOSELYN BELISARIO",
 ]
 
 if menu == "📝 Registro de Datos":
